@@ -1,0 +1,3 @@
+# León AI backend
+
+Render: create Web Service from this repository, runtime Docker, Dockerfile path `backend/Dockerfile`, Docker context `.`. Set `OPENAI_API_KEY` and a long random `LEON_APP_TOKEN` in Render environment variables (never commit secrets). The default model is `gpt-4.1-mini` and may incur API charges. `/health` is public; `/chat` requires `Authorization: Bearer <LEON_APP_TOKEN>`. This is a backend foundation only: Android integration, internet search, persistent memory, rate limiting and production-grade user authentication are not implemented. Do not embed the shared token in a publicly distributed Android APK. Docker CMD binds port 10000; configure Render PORT=10000 if necessary.
