@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: leon-ai-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LEON_APP_TOKEN
+        sync: false
