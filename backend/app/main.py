@@ -1,9 +1,14 @@
 import os
 import httpx
 from fastapi import FastAPI, HTTPException, Header
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="León AI Backend", docs_url=None, redoc_url=None)
+
+@app.get("/", response_class=HTMLResponse)
+def home():
+    return "<!doctype html><html lang=\"es\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>León AI</title><style>body{font:16px system-ui;background:#18142b;color:white;max-width:700px;margin:auto;padding:16px}input,button{font:inherit;padding:12px;border-radius:10px}input{background:#292340;color:white;border:1px solid #7566a4}button{background:#8565dc;color:white;border:0}#messages{min-height:40vh;white-space:pre-wrap}p{padding:10px;background:#292340;border-radius:10px}form{display:flex;gap:6px}form input{flex:1;min-width:0}</style><h2>🦁 León AI</h2><p>Prueba de conexión. Introduce tu token LEON_APP_TOKEN; no se guarda en el navegador.</p><input id=\"token\" type=\"password\" placeholder=\"Token de acceso\" aria-label=\"Token de acceso\"><div id=\"messages\"></div><form id=\"form\"><input id=\"msg\" placeholder=\"Escribe a León…\" required maxlength=\"4000\"><button id=\"send\">Enviar</button></form><script>const m=document.getElementById('messages'),f=document.getElementById('form'),s=document.getElementById('send');function add(x){let p=document.createElement('p');p.textContent=x;m.append(p)}f.onsubmit=async e=>{e.preventDefault();let q=document.getElementById('msg').value,t=document.getElementById('token').value;if(!t){add('Introduce el token de acceso.');return}add('Tú: '+q);s.disabled=true;try{let r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({message:q})});let d=await r.json();add(r.ok?'León: '+d.reply:'Error '+r.status+': '+(d.detail||'Sin respuesta'))}catch(e){add('No se pudo conectar.')}finally{s.disabled=false}};</script>"
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
