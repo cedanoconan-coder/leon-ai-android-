@@ -1,4 +1,5 @@
 import os
+import unicodedata
 import httpx
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import HTMLResponse
@@ -22,7 +23,10 @@ async def chat(request: ChatRequest, authorization: str | None = Header(default=
     token = os.getenv('LEON_APP_TOKEN')
     if not token or authorization != f'Bearer {token}':
         raise HTTPException(status_code=401, detail='Unauthorized')
-    api_key = os.getenv('OPENAI_API_KEY')
+    api_key = os.getenv('OPENAI_API_KEY', '')
+    api_key = ''.join(ch for ch in api_key.strip() if unicodedata.category(ch) != 'Cf')
+    if api_key and (not api_key.isascii() or any(ch.isspace() for ch in api_key)):
+        raise HTTPException(status_code=503, detail='OPENAI_API_KEY contiene caracteres inválidos. Vuelve a copiar la clave original desde OpenAI en Render.')
     if not api_key:
         raise HTTPException(status_code=503, detail='AI provider not configured')
     async with httpx.AsyncClient(timeout=45) as client:
