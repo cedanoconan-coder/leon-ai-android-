@@ -3,6 +3,8 @@ package com.leonai.android
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
+import java.io.File
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
@@ -17,6 +19,7 @@ class MainActivity : Activity() {
     private lateinit var command: EditText
     private lateinit var result: TextView
     private val speechRequest = 42
+    private val modelRequest = 44
     private lateinit var history: TextView
     private val prefs by lazy { getSharedPreferences("leon_local_chat", MODE_PRIVATE) }
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,6 +33,19 @@ class MainActivity : Activity() {
         result = TextView(this).apply { text = "Control local. Ningún comando se envía a servidores."; textSize = 16f }
         history = TextView(this).apply { text = prefs.getString("history", "") ?: ""; textSize = 15f }
         val historyScroll = ScrollView(this).apply { addView(history) }
+        val modelStatus = TextView(this).apply {
+            text = if (File(filesDir, "leon-model.gguf").exists()) "Modelo GGUF importado; motor de inferencia pendiente" else "Sin modelo local instalado"
+        }
+        val importModel = Button(this).apply {
+            text = "Importar modelo GGUF"
+            setOnClickListener {
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    type = "*/*"
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                }
+                startActivityForResult(intent, modelRequest)
+            }
+        }
         val clearHistory = Button(this).apply { text = "Borrar conversación local"; setOnClickListener { prefs.edit().remove("history").apply(); history.text = ""; result.text = "Conversación borrada de este dispositivo" } }
         val send = Button(this).apply { text = "Ejecutar comando"; setOnClickListener { execute(command.text.toString()) } }
         val voice = Button(this).apply { text = "Hablar"; setOnClickListener { startVoice() } }
@@ -37,7 +53,7 @@ class MainActivity : Activity() {
             text = "Habilitar accesibilidad"
             setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         }
-        listOf(title, command, send, voice, permissions, result, clearHistory, historyScroll).forEach(layout::addView)
+        listOf(title, modelStatus, importModel, command, send, voice, permissions, result, clearHistory, historyScroll).forEach(layout::addView)
         setContentView(layout)
     }
     private fun execute(raw: String) {
@@ -71,6 +87,35 @@ class MainActivity : Activity() {
     @Deprecated("Uses platform speech activity callback")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == modelRequest && resultCode == RESULT_OK) {
+            val uri: Uri = data?.data ?: return
+            result.text = "Importando modelo en almacenamiento privado..."
+            Thread {
+                try {
+                    val target = File(filesDir, "leon-model.gguf")
+                    val temporary = File(filesDir, "leon-model.gguf.tmp")
+                    try {
+                        contentResolver.openInputStream(uri)?.use { input ->
+                            temporary.outputStream().use { output -> input.copyTo(output) }
+                        } ?: error("No se pudo leer el archivo")
+                        if (temporary.length() < 1024 * 1024) error("El archivo no parece ser un modelo GGUF válido")
+                        temporary.inputStream().use { stream ->
+                            val magic = ByteArray(4)
+                            if (stream.read(magic) != 4 || !magic.contentEquals(byteArrayOf(71, 71, 85, 70))) error("Formato GGUF inválido")
+                        }
+                        if (target.exists() && !target.delete()) error("No se pudo reemplazar el modelo anterior")
+                        if (!temporary.renameTo(target)) error("No se pudo guardar el modelo")
+                        runOnUiThread {
+                            modelStatus.text = "Modelo GGUF importado; motor de inferencia pendiente"
+                            result.text = "Modelo guardado localmente. Aún no puede generar respuestas."
+                        }
+                    } finally { temporary.delete() }
+                } catch (error: Exception) {
+                    runOnUiThread { result.text = "No se pudo importar el modelo: ${error.message}" }
+                }
+            }.start()
+            return
+        }
         if (requestCode == speechRequest && resultCode == RESULT_OK) {
             val spoken = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull() ?: return
             command.setText(spoken)
