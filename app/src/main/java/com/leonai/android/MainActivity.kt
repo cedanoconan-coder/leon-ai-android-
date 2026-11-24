@@ -21,6 +21,7 @@ class MainActivity : Activity() {
     private val speechRequest = 42
     private val modelRequest = 44
     private lateinit var history: TextView
+    private lateinit var modelStatus: TextView
     private val prefs by lazy { getSharedPreferences("leon_local_chat", MODE_PRIVATE) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,7 +34,7 @@ class MainActivity : Activity() {
         result = TextView(this).apply { text = "Control local. Ningún comando se envía a servidores."; textSize = 16f }
         history = TextView(this).apply { text = prefs.getString("history", "") ?: ""; textSize = 15f }
         val historyScroll = ScrollView(this).apply { addView(history) }
-        val modelStatus = TextView(this).apply {
+        modelStatus = TextView(this).apply {
             text = if (File(filesDir, "leon-model.gguf").exists()) "Modelo GGUF importado; motor de inferencia pendiente" else "Sin modelo local instalado"
         }
         val importModel = Button(this).apply {
