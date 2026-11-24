@@ -48,7 +48,7 @@ class MainActivity : Activity() {
             "ajustes" -> { startActivity(Intent(Settings.ACTION_SETTINGS)); result.text = "Abriendo ajustes" }
             else -> result.text = "El modelo de IA local aún no está instalado. Por ahora puedo ejecutar: inicio, atrás o ajustes."
         }
-        val entry = "Tú: ${raw.trim()}\\nLeón: ${result.text}\\n\\n"
+        val entry = "Tú: ${raw.trim()}" + System.lineSeparator() + "León: ${result.text}" + System.lineSeparator() + System.lineSeparator()
         val previous = prefs.getString("history", "") ?: ""
         val updated = (previous + entry).takeLast(100_000)
         prefs.edit().putString("history", updated).apply()
